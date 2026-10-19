@@ -44,7 +44,12 @@ export default function Login() {
           <Wordmark height={44} tone="light" />
         </div>
         <div className="login-pitch">
-          <h1>Your project,<br />in plain sight.</h1>
+          <div className="eyebrow">Client portal</div>
+          <h1>
+            Your project,
+            <br />
+            <em className="serif serif-accent">in plain sight.</em>
+          </h1>
           <p>Follow progress, timelines and decisions for your CodeSync build — updated by the team as work happens.</p>
           <ul className="login-points">
             <li><Icon name="board" size={16} /> Live task board</li>

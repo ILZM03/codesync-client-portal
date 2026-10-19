@@ -4,9 +4,9 @@ const media = typeof window !== 'undefined' && window.matchMedia ? window.matchM
 
 export function getThemePref() {
   try {
-    return localStorage.getItem(KEY) || 'system';
+    return localStorage.getItem(KEY) || 'dark';
   } catch {
-    return 'system';
+    return 'dark';
   }
 }
 
