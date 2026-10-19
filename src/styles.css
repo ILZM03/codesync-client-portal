@@ -2968,18 +2968,86 @@ textarea {
   text-transform: uppercase;
 }
 
-/* Very subtle film grain, as on codesync.com (dark theme only, static) */
-:root[data-theme='dark'] body::after {
-  content: '';
-  position: fixed;
-  inset: 0;
-  z-index: 90;
-  pointer-events: none;
-  opacity: 0.045;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+
+/* ---------- Custom form controls (no browser defaults) ---------- */
+.remember {
+  gap: 10px;
+  width: fit-content;
 }
-@media print {
-  body::after {
-    display: none !important;
-  }
+.remember input[type='checkbox'] {
+  appearance: none;
+  -webkit-appearance: none;
+  flex: none;
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  display: inline-grid;
+  place-items: center;
+  border-radius: 6px;
+  border: 1px solid var(--border-strong);
+  background: var(--surface-2);
+  cursor: pointer;
+  transition: background 0.3s var(--ease), border-color 0.3s var(--ease), box-shadow 0.3s var(--ease);
+}
+.remember input[type='checkbox']::after {
+  content: '';
+  width: 10px;
+  height: 10px;
+  background: #f5f5f3;
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='3.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4.5 12.5l5 5 10-11'/%3E%3C/svg%3E") center / contain no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='3.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4.5 12.5l5 5 10-11'/%3E%3C/svg%3E") center / contain no-repeat;
+  transform: scale(0.4);
+  opacity: 0;
+  transition: transform 0.35s var(--ease), opacity 0.2s;
+}
+.remember:hover input[type='checkbox'] {
+  border-color: var(--text-3);
+}
+.remember input[type='checkbox']:checked {
+  background: var(--brand);
+  border-color: var(--brand);
+  box-shadow: 0 0 0 4px rgba(140, 21, 29, 0.16);
+}
+.remember input[type='checkbox']:checked::after {
+  transform: scale(1);
+  opacity: 1;
+}
+.remember input[type='checkbox']:focus-visible {
+  outline: 2px solid var(--brand-bright);
+  outline-offset: 2px;
+}
+
+/* Native date-picker icon, tinted to the theme */
+input[type='date']::-webkit-calendar-picker-indicator {
+  cursor: pointer;
+  opacity: 0.55;
+  transition: opacity 0.2s;
+}
+input[type='date']::-webkit-calendar-picker-indicator:hover {
+  opacity: 1;
+}
+:root[data-theme='dark'] input[type='date']::-webkit-calendar-picker-indicator {
+  filter: invert(1);
+}
+
+/* Slim scrollbars */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-strong) transparent;
+}
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--border-strong);
+  border-radius: 999px;
+  border: 3px solid transparent;
+  background-clip: padding-box;
+}
+::-webkit-scrollbar-thumb:hover {
+  background-color: var(--text-3);
+}
+::-webkit-scrollbar-track {
+  background: transparent;
 }

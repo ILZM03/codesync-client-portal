@@ -79,7 +79,7 @@ export default function Login() {
 
           <div className="field">
             <label htmlFor="email">Username</label>
-            <input id="email" type="text" autoComplete="username" autoCapitalize="none" spellCheck={false} required value={email} onChange={(e) => setEmail(e.target.value)} placeholder="e.g. deckami" />
+            <input id="email" type="text" autoComplete="username" autoCapitalize="none" spellCheck={false} required value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Your username" />
           </div>
           <div className="field">
             <label htmlFor="password">Password</label>

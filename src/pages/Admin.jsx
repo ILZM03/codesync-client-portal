@@ -217,7 +217,7 @@ function ClientModal({ client, onClose, onSave }) {
       }
     >
       <div className="stack">
-        <Field label="Client name" htmlFor="cl-name"><input id="cl-name" value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. TCG Marketplace" /></Field>
+        <Field label="Client name" htmlFor="cl-name"><input id="cl-name" value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Acme Sdn Bhd" /></Field>
         <Field label="Brand colour" hint="Used as the accent throughout this client’s portal.">
           <div className="swatches" role="radiogroup" aria-label="Brand colour">
             {ACCENTS.map((c) => (

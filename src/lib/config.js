@@ -14,7 +14,7 @@ export const IS_DEMO = import.meta.env.VITE_DEMO === 'true' || params.has('demo'
 
 export const SUPABASE = { url, key };
 
-// Username sign-in: "deckami" is stored in Supabase Auth as "deckami@codesync.internal".
+// Username sign-in: a username like "jane" is stored in Supabase Auth as "jane@codesync.internal".
 export const LOGIN_DOMAIN = 'codesync.internal';
 export const toLoginEmail = (value) => {
   const v = String(value || '').trim();
