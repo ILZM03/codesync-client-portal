@@ -4,7 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import { api } from '../lib/api';
 import { Avatar, Modal, Field } from './ui';
-import { Icon, Logo } from './Icon';
+import { Icon, Wordmark } from './Icon';
 
 export default function AppShell() {
   const { profile, isStaff, signOut } = useAuth();
@@ -54,8 +54,7 @@ export default function AppShell() {
           <Icon name="menu" />
         </button>
         <div className="topbar-brand">
-          <Logo size={24} />
-          <span className="brand-name">CodeSync</span>
+          <Wordmark height={26} tone="light" />
         </div>
         <Avatar profile={profile} size={28} />
       </header>
@@ -64,11 +63,8 @@ export default function AppShell() {
 
       <aside className="sidebar" aria-label="Main navigation">
         <div className="sidebar-brand">
-          <Logo size={28} />
-          <div>
-            <div className="brand-name">CodeSync</div>
-            <div className="brand-sub">Client Portal</div>
-          </div>
+          <Wordmark height={34} tone="light" />
+          <div className="brand-sub portal-label">Client Portal</div>
         </div>
 
         <nav className="side-nav">

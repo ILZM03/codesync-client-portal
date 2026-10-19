@@ -138,11 +138,14 @@ export function Icon({ name, size = 16, strokeWidth = 1.8, ...rest }) {
   );
 }
 
-export function Logo({ size = 28 }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 32 32" aria-hidden="true">
-      <rect width="32" height="32" rx="8" fill="#C42531" />
-      <path d="M13 10 8 16l5 6M19 10l5 6-5 6" fill="none" stroke="#fff" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  );
+const BASE = import.meta.env.BASE_URL;
+
+/** CodeSync Systems logo. tone="light" = white lettering (dark backgrounds), "dark" = black lettering. */
+export function Wordmark({ height = 32, tone = 'light' }) {
+  return <img className="wordmark" src={`${BASE}brand/codesync-logo-${tone}.png`} alt="CodeSync Systems" style={{ height }} />;
+}
+
+/** The chevrons + chain mark on its own. */
+export function Logo({ size = 28, tone = 'light' }) {
+  return <img className="wordmark" src={`${BASE}brand/codesync-mark-${tone}.png`} alt="" aria-hidden="true" style={{ height: size }} />;
 }

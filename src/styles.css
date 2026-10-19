@@ -1172,9 +1172,23 @@ input[type='range']::-moz-range-thumb {
 }
 .sidebar-brand {
   display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 4px 8px;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 6px 8px 2px;
+}
+.wordmark {
+  display: block;
+  width: auto;
+  max-width: 100%;
+  object-fit: contain;
+}
+.portal-label {
+  font-family: var(--mono);
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  font-size: 10.5px;
+  padding-left: 2px;
 }
 .side-nav,
 .side-section {

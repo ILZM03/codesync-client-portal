@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { api } from '../lib/api';
 import { useAuth } from '../context/AuthContext';
-import { Icon, Logo } from '../components/Icon';
+import { Icon, Wordmark } from '../components/Icon';
 
 export default function Login() {
   const { session } = useAuth();
@@ -38,8 +38,7 @@ export default function Login() {
     <div className="login">
       <aside className="login-brand">
         <div className="login-brand-top">
-          <Logo size={32} />
-          <span className="brand-name">CodeSync</span>
+          <Wordmark height={44} tone="light" />
         </div>
         <div className="login-pitch">
           <h1>Your project,<br />in plain sight.</h1>
@@ -56,8 +55,7 @@ export default function Login() {
       <main className="login-main">
         <form className="login-form" onSubmit={submit}>
           <div className="login-mobile-logo">
-            <Logo size={28} />
-            <span className="brand-name dark">CodeSync</span>
+            <Wordmark height={36} tone="dark" />
           </div>
           <h2>Sign in to your portal</h2>
           <p className="muted">Use the email and password your CodeSync project lead sent you.</p>
