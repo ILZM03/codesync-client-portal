@@ -33,12 +33,11 @@ No Supabase handy? Run on built-in sample data: `VITE_DEMO=true npm run dev`, or
 
 ## Deploy to GitHub Pages
 
-1. Push this folder to a GitHub repo (branch `main`).
-2. **Settings → Pages →** Source: **GitHub Actions**.
-3. **Settings → Secrets and variables → Actions → Variables**, add:
-   - `VITE_SUPABASE_URL` = `https://mhctlneyggfjnrgdbnxl.supabase.co`
-   - `VITE_SUPABASE_PUBLISHABLE_KEY` = the publishable key from Supabase → Project Settings → API Keys
-4. Push to `main` (or run the workflow manually). The site appears at `https://<user>.github.io/<repo>/`.
+1. **Settings → Pages →** Source: **GitHub Actions** (one-time).
+2. Every push to `main` builds and deploys automatically (or run the workflow manually from the Actions tab).
+   The site is at `https://ilzm03.github.io/codesync-client-portal/`.
+
+The Supabase URL and publishable key live in `.env.production`. To point at a different Supabase project, edit that file.
 
 Free GitHub plans only publish Pages from **public** repos. That's fine here: no secrets or client data
 live in the repo — the publishable key is meant to be public, and all data sits behind Supabase auth.
