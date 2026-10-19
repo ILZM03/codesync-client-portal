@@ -2,6 +2,7 @@
 // Mirrors the database rules: staff can edit everything, clients only see
 // their own projects (minus internal tasks) and can only comment.
 import { SEED } from './seed';
+import { setRemember } from '../remember';
 
 const DB_KEY = 'cs-portal-demo-db-v1';
 const SESSION_KEY = 'cs-portal-demo-session';
@@ -29,7 +30,7 @@ const save = () => {
 
 let sessionUser = null;
 try {
-  sessionUser = sessionStorage.getItem(SESSION_KEY);
+  sessionUser = localStorage.getItem(SESSION_KEY) || sessionStorage.getItem(SESSION_KEY);
 } catch {
   /* storage unavailable */
 }
@@ -100,13 +101,15 @@ export const mockApi = {
     authListeners.add(cb);
     return () => authListeners.delete(cb);
   },
-  async signIn(email) {
+  async signIn(email, _password, remember = true) {
+    setRemember(remember);
     const v = String(email).trim().toLowerCase();
     const p = db.profiles.find((x) => x.email.toLowerCase() === v || x.email.toLowerCase().split('@')[0] === v);
     if (!p) throw new Error('Username or password is incorrect.');
     sessionUser = p.id;
     try {
-      sessionStorage.setItem(SESSION_KEY, p.id);
+      (remember ? localStorage : sessionStorage).setItem(SESSION_KEY, p.id);
+      (remember ? sessionStorage : localStorage).removeItem(SESSION_KEY);
     } catch {
       /* ignore */
     }
@@ -116,6 +119,7 @@ export const mockApi = {
     sessionUser = null;
     try {
       sessionStorage.removeItem(SESSION_KEY);
+      localStorage.removeItem(SESSION_KEY);
     } catch {
       /* ignore */
     }

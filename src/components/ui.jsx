@@ -40,7 +40,7 @@ export function StatusPill({ status }) {
   );
 }
 
-export function ProgressBar({ value, color = 'var(--accent)', height = 6, label }) {
+export function ProgressBar({ value, color = 'var(--accent-ink)', height = 6, label }) {
   return (
     <div className="progress" style={{ height }} role="progressbar" aria-valuenow={value} aria-valuemin={0} aria-valuemax={100} aria-label={label}>
       <div className="progress-fill" style={{ width: `${Math.max(0, Math.min(100, value))}%`, background: color }} />

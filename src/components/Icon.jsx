@@ -106,6 +106,19 @@ const paths = {
   flag: <path d="M4 22V4a1 1 0 0 1 1-1h11l-2 4 2 4H5" />,
   activity: <path d="M22 12h-4l-3 9L9 3l-3 9H2" />,
   sparkle: <path d="M12 3v4M12 17v4M3 12h4M17 12h4M6 6l2.5 2.5M15.5 15.5 18 18M6 18l2.5-2.5M15.5 8.5 18 6" />,
+  sun: (
+    <>
+      <circle cx="12" cy="12" r="4" />
+      <path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4" />
+    </>
+  ),
+  moon: <path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z" />,
+  monitor: (
+    <>
+      <rect x="2" y="4" width="20" height="13" rx="2" />
+      <path d="M8 21h8M12 17v4" />
+    </>
+  ),
   grip: (
     <>
       <circle cx="9" cy="6" r="1" />
@@ -140,8 +153,16 @@ export function Icon({ name, size = 16, strokeWidth = 1.8, ...rest }) {
 
 const BASE = import.meta.env.BASE_URL;
 
-/** CodeSync Systems logo. tone="light" = white lettering (dark backgrounds), "dark" = black lettering. */
+/** CodeSync Systems logo. tone="light" = white lettering (dark backgrounds), "dark" = black lettering,
+ *  "auto" = follows the light/dark theme (for use on page backgrounds). */
 export function Wordmark({ height = 32, tone = 'light' }) {
+  if (tone === 'auto')
+    return (
+      <>
+        <img className="wordmark logo-for-light" src={`${BASE}brand/codesync-logo-dark.png`} alt="CodeSync Systems" style={{ height }} />
+        <img className="wordmark logo-for-dark" src={`${BASE}brand/codesync-logo-light.png`} alt="CodeSync Systems" style={{ height }} />
+      </>
+    );
   return <img className="wordmark" src={`${BASE}brand/codesync-logo-${tone}.png`} alt="CodeSync Systems" style={{ height }} />;
 }
 

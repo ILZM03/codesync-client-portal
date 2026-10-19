@@ -6,6 +6,7 @@ import { api } from '../lib/api';
 import { displayLogin } from '../lib/config';
 import { Avatar, Modal, Field } from './ui';
 import { Icon, Wordmark } from './Icon';
+import ThemeSwitch from './ThemeSwitch';
 
 export default function AppShell() {
   const { profile, isStaff, signOut } = useAuth();
@@ -115,6 +116,10 @@ export default function AppShell() {
           {menuOpen && (
             <div className="user-menu" role="menu">
               <div className="user-menu-email">{displayLogin(profile?.email)}</div>
+              <div className="user-menu-theme">
+                <span>Theme</span>
+                <ThemeSwitch onDark />
+              </div>
               <button role="menuitem" onClick={() => { setPwOpen(true); setMenuOpen(false); }}>
                 <Icon name="key" size={15} /> Change password
               </button>

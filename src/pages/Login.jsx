@@ -3,6 +3,8 @@ import { Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { api } from '../lib/api';
 import { useAuth } from '../context/AuthContext';
 import { Icon, Wordmark } from '../components/Icon';
+import ThemeSwitch from '../components/ThemeSwitch';
+import { getRemember } from '../lib/remember';
 
 export default function Login() {
   const { session } = useAuth();
@@ -12,6 +14,7 @@ export default function Login() {
   const [password, setPassword] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+  const [remember, setRemember] = useState(getRemember);
 
   if (session) return <Navigate to={location.state?.from || '/'} replace />;
 
@@ -20,7 +23,7 @@ export default function Login() {
     setBusy(true);
     setError('');
     try {
-      await api.signIn(email, password);
+      await api.signIn(email, password, remember);
       navigate(location.state?.from || '/', { replace: true });
     } catch (err) {
       setError(err.message);
@@ -30,7 +33,7 @@ export default function Login() {
   }
 
   async function demoSignIn(acct) {
-    await api.signIn(acct.email, 'demo');
+    await api.signIn(acct.email, 'demo', remember);
     navigate('/', { replace: true });
   }
 
@@ -53,9 +56,12 @@ export default function Login() {
       </aside>
 
       <main className="login-main">
+        <div className="login-theme">
+          <ThemeSwitch />
+        </div>
         <form className="login-form" onSubmit={submit}>
           <div className="login-mobile-logo">
-            <Wordmark height={36} tone="dark" />
+            <Wordmark height={36} tone="auto" />
           </div>
           <h2>Sign in to your portal</h2>
           <p className="muted">Use the username and password your CodeSync project lead sent you.</p>
@@ -74,6 +80,10 @@ export default function Login() {
             <label htmlFor="password">Password</label>
             <input id="password" type="password" autoComplete="current-password" required={!api.demo} value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" />
           </div>
+          <label className="remember">
+            <input type="checkbox" checked={remember} onChange={(e) => setRemember(e.target.checked)} />
+            Keep me signed in on this device
+          </label>
           <button className="btn btn-primary btn-lg btn-block" disabled={busy}>
             {busy ? 'Signing in…' : 'Sign in'}
           </button>

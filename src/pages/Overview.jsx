@@ -70,7 +70,7 @@ export default function Overview() {
                       </span>
                       <span className="mono small">{ps.progress}%</span>
                     </div>
-                    <ProgressBar value={ps.progress} color={ps.state === 'complete' ? 'var(--s-done)' : 'var(--accent)'} label={`${p.name} progress`} />
+                    <ProgressBar value={ps.progress} color={ps.state === 'complete' ? 'var(--s-done)' : 'var(--accent-ink)'} label={`${p.name} progress`} />
                     <div className="small muted">
                       {fmtRange(p.start_date, p.end_date)} · {ps.done}/{ps.total} tasks
                     </div>

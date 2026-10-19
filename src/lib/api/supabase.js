@@ -1,10 +1,11 @@
 import { createClient } from '@supabase/supabase-js';
 import { SUPABASE, toLoginEmail } from '../config';
+import { rememberStorage, setRemember } from '../remember';
 
 let _sb;
 const sb = () =>
   (_sb ||= createClient(SUPABASE.url, SUPABASE.key, {
-    auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true },
+    auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true, storage: rememberStorage },
   }));
 
 async function run(query) {
@@ -28,7 +29,8 @@ export const supabaseApi = {
     const { data } = sb().auth.onAuthStateChange((_event, session) => cb(session));
     return () => data.subscription.unsubscribe();
   },
-  async signIn(email, password) {
+  async signIn(email, password, remember = true) {
+    setRemember(remember);
     const { error } = await sb().auth.signInWithPassword({ email: toLoginEmail(email), password });
     if (error) throw new Error(error.message === 'Invalid login credentials' ? 'Username or password is incorrect.' : error.message);
   },
