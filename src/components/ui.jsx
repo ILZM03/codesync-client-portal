@@ -9,6 +9,13 @@ export function Avatar({ profile, size = 24, title }) {
         <Icon name="users" size={size * 0.55} />
       </span>
     );
+  // The CodeSync team's shared "Admin" account (or anyone with avatar_color "brand") shows the company mark.
+  if (profile.avatar_color === 'brand' || (profile.role === 'staff' && profile.full_name?.trim().toLowerCase() === 'admin'))
+    return (
+      <span className="avatar avatar-brand" style={{ width: size, height: size }} title={title ?? `${profile.full_name} · CodeSync Systems`} aria-label={profile.full_name}>
+        <img src={`${import.meta.env.BASE_URL}brand/codesync-mark-light.png`} alt="" />
+      </span>
+    );
   const initials = (profile.full_name || profile.email || '?')
     .split(/\s+/)
     .map((w) => w[0])

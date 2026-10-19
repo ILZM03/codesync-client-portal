@@ -681,6 +681,18 @@ textarea::placeholder {
   letter-spacing: 0;
   box-shadow: 0 0 0 2px var(--surface);
 }
+.avatar-brand {
+  background: var(--onyx);
+  overflow: hidden;
+}
+.avatar-brand img {
+  width: 76%;
+  height: auto;
+  display: block;
+}
+:root[data-theme='dark'] .avatar-brand {
+  box-shadow: 0 0 0 1px var(--onyx-line), 0 0 0 2px var(--surface);
+}
 .avatar-empty {
   background: var(--surface-3);
   color: var(--text-3);
