@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link, useOutletContext } from 'react-router-dom';
 import { api } from '../lib/api';
+import { displayLogin, LOGIN_DOMAIN } from '../lib/config';
 import { ACCENTS } from '../lib/constants';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
@@ -99,7 +100,7 @@ export default function Admin() {
                           <Avatar profile={byId[id]} size={24} />
                           <span className="member-text">
                             <span className="truncate">{byId[id].full_name}</span>
-                            <span className="small muted truncate">{byId[id].email}</span>
+                            <span className="small muted truncate">{displayLogin(byId[id].email)}</span>
                           </span>
                           <button className="link-btn small" onClick={() => run(() => api.removeMember(c.id, id), 'Access removed')}>Remove</button>
                         </div>
@@ -112,7 +113,7 @@ export default function Admin() {
                           onChange={(e) => e.target.value && run(() => api.addMember(c.id, e.target.value), 'Access granted')}
                         >
                           <option value="">+ Give access to…</option>
-                          {addable.map((p) => <option key={p.id} value={p.id}>{p.full_name} ({p.email})</option>)}
+                          {addable.map((p) => <option key={p.id} value={p.id}>{p.full_name} ({displayLogin(p.email)})</option>)}
                         </select>
                       )}
                     </div>
@@ -128,7 +129,7 @@ export default function Admin() {
           <div className="callout">
             <Icon name="key" size={16} />
             <span>
-              <strong>Adding someone new:</strong> create their login in Supabase → Authentication → <em>Add user</em> (tick “Auto confirm”), then send them the portal link and password. They appear here as a client — switch them to Team if they work at CodeSync, or give them access to a client on the Clients tab.
+              <strong>Adding someone new:</strong> in Supabase → Authentication → <em>Add user</em>, enter <code>username@{LOGIN_DOMAIN}</code> as the email (or a real email), set a password and tick “Auto confirm”. They sign in with just the username. New logins appear here as clients — switch CodeSync staff to Team, or give a client access on the Clients tab.
             </span>
           </div>
           <div className="table-wrap">
@@ -146,7 +147,7 @@ export default function Admin() {
                           <Avatar profile={p} size={28} />
                           <span className="member-text">
                             <span>{p.full_name} {p.id === me?.id && <span className="muted small">(you)</span>}</span>
-                            <span className="small muted">{p.email}</span>
+                            <span className="small muted">{displayLogin(p.email)}</span>
                           </span>
                         </div>
                       </td>

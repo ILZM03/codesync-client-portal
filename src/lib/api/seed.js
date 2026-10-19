@@ -8,7 +8,7 @@ const profiles = [
   { id: 'u-client', full_name: 'Client Viewer', email: 'client@example.com', title: 'Client stakeholder', role: 'client', avatar_color: '#0F4C5C' },
 ];
 
-const clients = [{ id: 'c-tcg', name: 'TCG Marketplace', accent_color: '#0F4C5C', created_at: at('2026-09-01') }];
+const clients = [{ id: 'c-tcg', name: 'Deckami', accent_color: '#0F4C5C', created_at: at('2026-09-01') }];
 const client_members = [{ client_id: 'c-tcg', user_id: 'u-client' }];
 
 const projects = [

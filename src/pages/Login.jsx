@@ -58,7 +58,7 @@ export default function Login() {
             <Wordmark height={36} tone="dark" />
           </div>
           <h2>Sign in to your portal</h2>
-          <p className="muted">Use the email and password your CodeSync project lead sent you.</p>
+          <p className="muted">Use the username and password your CodeSync project lead sent you.</p>
 
           {error && (
             <div className="form-error" role="alert">
@@ -67,8 +67,8 @@ export default function Login() {
           )}
 
           <div className="field">
-            <label htmlFor="email">Email</label>
-            <input id="email" type="email" autoComplete="email" required value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@company.com" />
+            <label htmlFor="email">Username</label>
+            <input id="email" type="text" autoComplete="username" autoCapitalize="none" spellCheck={false} required value={email} onChange={(e) => setEmail(e.target.value)} placeholder="e.g. deckami" />
           </div>
           <div className="field">
             <label htmlFor="password">Password</label>

@@ -13,3 +13,11 @@ try {
 export const IS_DEMO = import.meta.env.VITE_DEMO === 'true' || params.has('demo') || !url || !key;
 
 export const SUPABASE = { url, key };
+
+// Username sign-in: "deckami" is stored in Supabase Auth as "deckami@codesync.internal".
+export const LOGIN_DOMAIN = 'codesync.internal';
+export const toLoginEmail = (value) => {
+  const v = String(value || '').trim();
+  return v.includes('@') ? v : `${v.toLowerCase()}@${LOGIN_DOMAIN}`;
+};
+export const displayLogin = (email) => (email && email.endsWith(`@${LOGIN_DOMAIN}`) ? email.split('@')[0] : email || '');

@@ -101,8 +101,9 @@ export const mockApi = {
     return () => authListeners.delete(cb);
   },
   async signIn(email) {
-    const p = db.profiles.find((x) => x.email.toLowerCase() === String(email).trim().toLowerCase());
-    if (!p) throw new Error('Email or password is incorrect.');
+    const v = String(email).trim().toLowerCase();
+    const p = db.profiles.find((x) => x.email.toLowerCase() === v || x.email.toLowerCase().split('@')[0] === v);
+    if (!p) throw new Error('Username or password is incorrect.');
     sessionUser = p.id;
     try {
       sessionStorage.setItem(SESSION_KEY, p.id);

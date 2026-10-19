@@ -1,5 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
-import { SUPABASE } from '../config';
+import { SUPABASE, toLoginEmail } from '../config';
 
 let _sb;
 const sb = () =>
@@ -29,8 +29,8 @@ export const supabaseApi = {
     return () => data.subscription.unsubscribe();
   },
   async signIn(email, password) {
-    const { error } = await sb().auth.signInWithPassword({ email: email.trim(), password });
-    if (error) throw new Error(error.message === 'Invalid login credentials' ? 'Email or password is incorrect.' : error.message);
+    const { error } = await sb().auth.signInWithPassword({ email: toLoginEmail(email), password });
+    if (error) throw new Error(error.message === 'Invalid login credentials' ? 'Username or password is incorrect.' : error.message);
   },
   async signOut() {
     await sb().auth.signOut();

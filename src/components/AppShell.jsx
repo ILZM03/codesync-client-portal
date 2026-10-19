@@ -3,6 +3,7 @@ import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import { api } from '../lib/api';
+import { displayLogin } from '../lib/config';
 import { Avatar, Modal, Field } from './ui';
 import { Icon, Wordmark } from './Icon';
 
@@ -113,7 +114,7 @@ export default function AppShell() {
           </button>
           {menuOpen && (
             <div className="user-menu" role="menu">
-              <div className="user-menu-email">{profile?.email}</div>
+              <div className="user-menu-email">{displayLogin(profile?.email)}</div>
               <button role="menuitem" onClick={() => { setPwOpen(true); setMenuOpen(false); }}>
                 <Icon name="key" size={15} /> Change password
               </button>
