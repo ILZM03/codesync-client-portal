@@ -51,6 +51,15 @@ live in the repo — the publishable key is meant to be public, and all data sit
 The first staff account must be promoted once in the SQL editor:
 `update public.profiles set role = 'staff' where email = 'you@codesync.my';`
 
+## Loading the TCG Marketplace plan
+
+`supabase/seed/tcg_marketplace_plan.sql` loads the 26-week delivery plan (19 Oct 2026 to 16 Apr 2027) into
+the live portal: phases, work packages, stage gates, the kick-off meeting, and a separate on-hold
+"TCG Marketplace · Next phase" project for work moved after the first launch (card scanning, auctions and the rest).
+It **deletes the project's Backlog tasks** and their comments; tasks In progress, In review or Done are kept as they are
+and move into the matching new phase. Every task is assigned to the shared Admin account. Run it once in the Supabase SQL editor.
+Demo mode uses the same data from `src/lib/api/seed.js`.
+
 ## Project structure
 
 ```
@@ -60,6 +69,7 @@ src/
   pages/          Login, Projects, Overview, Board, Timeline, Meetings, ProjectSettings, Admin
   components/     AppShell, TaskDrawer, ui primitives, icons
 supabase/migrations/001_portal_schema.sql   full schema, RLS, triggers
+supabase/seed/tcg_marketplace_plan.sql      TCG Marketplace delivery plan (see above)
 ```
 
 ## Ideas for Phase 2

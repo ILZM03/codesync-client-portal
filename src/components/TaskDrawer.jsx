@@ -257,7 +257,7 @@ function TaskBody({ task, data, isStaff, onClose }) {
             className="desc-input"
             value={desc}
             placeholder="Add details, acceptance criteria or links…"
-            rows={4}
+            rows={Math.min(12, Math.max(4, desc.split('\n').length + 1))}
             onChange={(e) => setDesc(e.target.value)}
             onBlur={() => desc !== (task.description || '') && update({ description: desc })}
           />

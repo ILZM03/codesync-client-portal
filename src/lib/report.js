@@ -3,11 +3,13 @@ import { addDays, parseDate, today, toISO } from './dates';
 /** Builds the meeting windows: one per logged meeting plus "Next review" (since the last one, up to now). */
 export function meetingWindows(meetings, project) {
   const asc = [...meetings].sort((a, b) => a.meeting_date.localeCompare(b.meeting_date));
+  // A kick-off on (or before) the project start date covers everything up to that meeting.
+  const start = project.start_date && project.start_date < asc[0]?.meeting_date ? project.start_date : null;
   const windows = asc.map((m, i) => ({
     id: m.id,
     meeting: m,
     title: m.title,
-    from: asc[i - 1]?.meeting_date || project.start_date || null,
+    from: asc[i - 1]?.meeting_date || start,
     to: m.meeting_date,
     upcoming: false,
   }));

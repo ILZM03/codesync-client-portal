@@ -4,7 +4,7 @@
 import { SEED } from './seed';
 import { setRemember } from '../remember';
 
-const DB_KEY = 'cs-portal-demo-db-v1';
+const DB_KEY = 'cs-portal-demo-db-v2';
 const SESSION_KEY = 'cs-portal-demo-session';
 const clone = (o) => JSON.parse(JSON.stringify(o));
 const nowIso = () => new Date().toISOString();
