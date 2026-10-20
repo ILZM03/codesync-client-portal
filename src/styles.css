@@ -2465,6 +2465,19 @@ input[type='range']::-moz-range-thumb {
 .client-project:hover {
   border-color: var(--border-strong);
 }
+.client-project-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+}
+.client-project-row .client-project {
+  flex: 1;
+  min-width: 0;
+}
+.team-only {
+  margin-top: 14px;
+}
 .member-row {
   display: flex;
   align-items: center;

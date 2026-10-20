@@ -39,11 +39,11 @@ export default function Projects() {
           {projects.map((p) => {
             const s = projectStats(p.tasks || []);
             return (
-              <Link key={p.id} to={`/p/${p.id}`} className="project-card" style={{ '--accent': p.client?.accent_color }}>
+              <Link key={p.id} to={`/p/${p.id}`} className="project-card" style={{ '--accent': p.client?.accent_color || 'var(--brand)' }}>
                 <div className="project-card-top">
                   <span className="client-chip">
-                    <span className="side-dot" style={{ background: p.client?.accent_color }} />
-                    {p.client?.name}
+                    <span className="side-dot" style={{ background: p.client?.accent_color || 'var(--text-3)' }} />
+                    {p.client?.name || 'Team only'}
                   </span>
                   <span className={`badge badge-${p.status}`}>{p.status.replace('_', ' ')}</span>
                 </div>

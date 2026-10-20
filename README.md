@@ -48,6 +48,10 @@ live in the repo — the publishable key is meant to be public, and all data sit
 2. In the portal, **Clients & people**: switch CodeSync staff to *Team*; for clients, give them access to their client workspace.
 3. Everyone can change their own password from the menu at the bottom-left.
 
+Each project is shared with one client, or with none (team only). On **Clients & people**, *Remove* takes a project away
+from a client and *Add existing project…* shares a team-only project with one. This needs
+`supabase/migrations/002_projects_without_client.sql` run once in the SQL editor.
+
 The first staff account must be promoted once in the SQL editor:
 `update public.profiles set role = 'staff' where email = 'you@codesync.my';`
 

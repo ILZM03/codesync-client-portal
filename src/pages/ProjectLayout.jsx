@@ -53,7 +53,7 @@ export default function ProjectLayout() {
           <div className="project-title">
             <div className="crumbs">
               <span className="side-dot" style={{ background: 'var(--accent)' }} />
-              {project.client?.name}
+              {project.client?.name || 'Team only · not shared with a client'}
             </div>
             <h1>{project.name}</h1>
           </div>

@@ -9,7 +9,7 @@ import { Avatar, EmptyState, Field, Modal, Spinner } from '../components/ui';
 import { Icon } from '../components/Icon';
 
 export default function Admin() {
-  const { reloadProjects } = useOutletContext();
+  const { projects, reloadProjects } = useOutletContext();
   const { profile: me } = useAuth();
   const toast = useToast();
   const [tab, setTab] = useState('clients');
@@ -45,6 +45,10 @@ export default function Admin() {
   if (!clients || !people) return <Spinner />;
   const byId = Object.fromEntries(people.map((p) => [p.id, p]));
   const clientPeople = people.filter((p) => p.role === 'client');
+  // Projects with no client are visible to the CodeSync team only.
+  const teamOnly = (projects || []).filter((p) => !p.client_id);
+  const share = (project, client) => run(() => api.updateProject(project.id, { client_id: client.id }), `${client.name} can now see ${project.name}`);
+  const unshare = (project, client) => run(() => api.updateProject(project.id, { client_id: null }), `${client.name} can no longer see ${project.name}`);
 
   return (
     <div className="page">
@@ -56,7 +60,7 @@ export default function Admin() {
         </div>
         <div className="row-gap">
           <button className="btn" onClick={() => setModal({ type: 'client' })}><Icon name="plus" size={15} /> New client</button>
-          <button className="btn btn-primary" onClick={() => setModal({ type: 'project' })} disabled={!clients.length}><Icon name="plus" size={15} /> New project</button>
+          <button className="btn btn-primary" onClick={() => setModal({ type: 'project' })}><Icon name="plus" size={15} /> New project</button>
         </div>
       </header>
 
@@ -65,8 +69,9 @@ export default function Admin() {
         <button className={`tab ${tab === 'people' ? 'active' : ''}`} onClick={() => setTab('people')}><Icon name="users" size={15} /> People <span className="count">{people.length}</span></button>
       </nav>
 
-      {tab === 'clients' &&
-        (clients.length === 0 ? (
+      {tab === 'clients' && (
+        <>
+        {clients.length === 0 ? (
           <EmptyState icon="folder" title="No clients yet" action={<button className="btn btn-primary" onClick={() => setModal({ type: 'client' })}>Create your first client</button>} />
         ) : (
           <div className="client-list">
@@ -85,12 +90,26 @@ export default function Admin() {
                       <div className="section-label">Projects</div>
                       {c.projects.length === 0 && <div className="muted small">No projects yet.</div>}
                       {c.projects.map((p) => (
-                        <Link key={p.id} to={`/p/${p.id}`} className="client-project">
-                          <span className="truncate">{p.name}</span>
-                          <span className={`badge badge-${p.status}`}>{p.status.replace('_', ' ')}</span>
-                        </Link>
+                        <div key={p.id} className="client-project-row">
+                          <Link to={`/p/${p.id}`} className="client-project">
+                            <span className="truncate">{p.name}</span>
+                            <span className={`badge badge-${p.status}`}>{p.status.replace('_', ' ')}</span>
+                          </Link>
+                          <button className="link-btn small" onClick={() => unshare(p, c)} title={`Hide ${p.name} from ${c.name}. It stays in the team’s project list.`}>Remove</button>
+                        </div>
                       ))}
-                      <button className="link-btn small" onClick={() => setModal({ type: 'project', clientId: c.id })}><Icon name="plus" size={13} /> Add project</button>
+                      {teamOnly.length > 0 && (
+                        <select
+                          className="select-sm"
+                          value=""
+                          aria-label={`Share an existing project with ${c.name}`}
+                          onChange={(e) => e.target.value && share(teamOnly.find((p) => p.id === e.target.value), c)}
+                        >
+                          <option value="">+ Add existing project…</option>
+                          {teamOnly.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+                        </select>
+                      )}
+                      <button className="link-btn small" onClick={() => setModal({ type: 'project', clientId: c.id })}><Icon name="plus" size={13} /> New project</button>
                     </div>
                     <div>
                       <div className="section-label">Client logins</div>
@@ -122,7 +141,10 @@ export default function Admin() {
               );
             })}
           </div>
-        ))}
+        )}
+        {teamOnly.length > 0 && <TeamOnlyProjects projects={teamOnly} clients={clients} onShare={share} />}
+        </>
+      )}
 
       {tab === 'people' && (
         <section className="card">
@@ -202,6 +224,36 @@ export default function Admin() {
   );
 }
 
+function TeamOnlyProjects({ projects, clients, onShare }) {
+  return (
+    <section className="card stack team-only">
+      <div className="card-head">
+        <h2>Team only</h2>
+        <span className="muted small">Not shared with any client</span>
+      </div>
+      {projects.map((p) => (
+        <div key={p.id} className="client-project-row">
+          <Link to={`/p/${p.id}`} className="client-project">
+            <span className="truncate">{p.name}</span>
+            <span className={`badge badge-${p.status}`}>{p.status.replace('_', ' ')}</span>
+          </Link>
+          {clients.length > 0 && (
+            <select
+              className="select-sm"
+              value=""
+              aria-label={`Share ${p.name} with a client`}
+              onChange={(e) => e.target.value && onShare(p, clients.find((c) => c.id === e.target.value))}
+            >
+              <option value="">Share with…</option>
+              {clients.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+            </select>
+          )}
+        </div>
+      ))}
+    </section>
+  );
+}
+
 function ClientModal({ client, onClose, onSave }) {
   const [name, setName] = useState(client?.name || '');
   const [accent, setAccent] = useState(client?.accent_color || ACCENTS[0]);
@@ -232,7 +284,7 @@ function ClientModal({ client, onClose, onSave }) {
 }
 
 function ProjectModal({ clients, clientId, onClose, onSave }) {
-  const [f, setF] = useState({ client_id: clientId || clients[0]?.id, name: '', summary: '', start_date: '', end_date: '' });
+  const [f, setF] = useState({ client_id: clientId || clients[0]?.id || '', name: '', summary: '', start_date: '', end_date: '' });
   const set = (k) => (e) => setF((x) => ({ ...x, [k]: e.target.value }));
   return (
     <Modal
@@ -244,8 +296,8 @@ function ProjectModal({ clients, clientId, onClose, onSave }) {
           <button className="btn" onClick={onClose}>Cancel</button>
           <button
             className="btn btn-primary"
-            disabled={!f.name.trim() || !f.client_id}
-            onClick={() => onSave({ ...f, name: f.name.trim(), start_date: f.start_date || null, end_date: f.end_date || null })}
+            disabled={!f.name.trim()}
+            onClick={() => onSave({ ...f, client_id: f.client_id || null, name: f.name.trim(), start_date: f.start_date || null, end_date: f.end_date || null })}
           >
             Create project
           </button>
@@ -253,9 +305,10 @@ function ProjectModal({ clients, clientId, onClose, onSave }) {
       }
     >
       <div className="stack">
-        <Field label="Client" htmlFor="np-c">
+        <Field label="Client" htmlFor="np-c" hint="Everyone with access to this client can see the project. You can change this later.">
           <select id="np-c" value={f.client_id} onChange={set('client_id')}>
             {clients.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+            <option value="">No client (team only)</option>
           </select>
         </Field>
         <Field label="Project name" htmlFor="np-n"><input id="np-n" value={f.name} onChange={set('name')} placeholder="e.g. Marketplace Phase 1" /></Field>

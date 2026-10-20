@@ -86,7 +86,7 @@ export default function AppShell() {
           {projects?.length === 0 && <div className="side-empty">No projects yet</div>}
           {projects?.map((p) => (
             <NavLink key={p.id} to={`/p/${p.id}`} className="side-link side-project">
-              <span className="side-dot" style={{ background: p.client?.accent_color }} />
+              <span className="side-dot" style={{ background: p.client?.accent_color || 'var(--text-3)' }} />
               <span className="truncate">{p.name}</span>
             </NavLink>
           ))}
