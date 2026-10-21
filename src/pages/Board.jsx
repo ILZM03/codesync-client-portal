@@ -93,8 +93,7 @@ export default function Board() {
     await actions.createTask({ title, status, phase_id: phaseFilter !== 'all' && phaseFilter !== 'none' ? phaseFilter : null, position: Date.now() });
   }
 
-  const teamOwners = owners.filter((p) => p.role === 'staff');
-  const clientOwners = owners.filter((p) => p.role !== 'staff');
+  const ownerOptions = [...owners.filter((p) => p.role === 'staff'), ...owners.filter((p) => p.role !== 'staff')];
   const activeTask = tasks.find((t) => t.id === activeId);
   const filtersOn = phaseFilter !== 'all' || ownerFilter !== 'all' || query;
 
@@ -113,14 +112,7 @@ export default function Board() {
         <select value={ownerFilter} onChange={(e) => setOwnerFilter(e.target.value)} aria-label="Filter by owner">
           <option value="all">Everyone</option>
           <option value="me">My tasks</option>
-          <optgroup label="CodeSync team">
-            {teamOwners.map((p) => <option key={p.id} value={p.id}>{p.full_name}</option>)}
-          </optgroup>
-          {clientOwners.length > 0 && (
-            <optgroup label="Client side">
-              {clientOwners.map((p) => <option key={p.id} value={p.id}>{p.full_name}</option>)}
-            </optgroup>
-          )}
+          {ownerOptions.map((p) => <option key={p.id} value={p.id}>{p.full_name}</option>)}
         </select>
         <select value={sort} onChange={(e) => setSort(e.target.value)} aria-label="Sort tasks">
           {SORTS.map((s) => <option key={s.id} value={s.id}>{s.label}</option>)}

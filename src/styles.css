@@ -962,6 +962,11 @@ textarea::placeholder {
   gap: 6px;
   flex-wrap: wrap;
 }
+.drawer-head .row-gap,
+.drawer-head .confirm-inline {
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
 .drawer-missing {
   padding-bottom: 20px;
 }

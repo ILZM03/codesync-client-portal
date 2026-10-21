@@ -8,14 +8,20 @@ import { useToast } from '../context/ToastContext';
 import { Avatar, ProgressBar, StatusDot, Toggle } from './ui';
 import { Icon } from './Icon';
 import { describeEvent } from '../lib/events';
-import { canEditTask } from '../lib/permissions';
+import { CLIENT_TASK_FIELDS, canEditTask } from '../lib/permissions';
+
+const STAFF_TASK_FIELDS = [...CLIENT_TASK_FIELDS, 'phase_id', 'assignee_id', 'is_milestone', 'internal'];
+const norm = (v) => (v === '' || v === undefined ? null : v);
 
 export default function TaskDrawer({ task, data, isStaff, onClose }) {
   const panelRef = useRef(null);
+  // TaskBody sets this while it has unsaved changes; it returns true when it took over the close.
+  const closeGuard = useRef(null);
+  const requestClose = () => closeGuard.current?.() || onClose();
 
   useEffect(() => {
     const onKey = (e) => {
-      if (e.key === 'Escape' && !e.target.closest?.('textarea, input')) onClose();
+      if (e.key === 'Escape' && !e.target.closest?.('textarea, input')) closeGuard.current?.() || onClose();
     };
     window.addEventListener('keydown', onKey);
     panelRef.current?.focus();
@@ -23,7 +29,7 @@ export default function TaskDrawer({ task, data, isStaff, onClose }) {
   }, [onClose]);
 
   return (
-    <div className="drawer-overlay" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
+    <div className="drawer-overlay" onMouseDown={(e) => e.target === e.currentTarget && requestClose()}>
       <aside className="drawer" role="dialog" aria-modal="true" aria-label={task ? task.title : 'Task'} ref={panelRef} tabIndex={-1}>
         {!task ? (
           <div className="drawer-missing">
@@ -34,30 +40,86 @@ export default function TaskDrawer({ task, data, isStaff, onClose }) {
             <p className="muted">This task no longer exists, or it isn’t shared with you.</p>
           </div>
         ) : (
-          <TaskBody task={task} data={data} isStaff={isStaff} onClose={onClose} />
+          <TaskBody task={task} data={data} isStaff={isStaff} onClose={onClose} closeGuard={closeGuard} />
         )}
       </aside>
     </div>
   );
 }
 
-function TaskBody({ task, data, isStaff, onClose }) {
-  const { actions, phases, owners, profileById, phaseById, project } = data;
+function TaskBody({ task, data, isStaff, onClose, closeGuard }) {
+  const { actions, phases, owners, profileById, phaseById } = data;
   const { profile } = useAuth();
+  const toast = useToast();
   const canEdit = canEditTask(task, profile);
-  const [title, setTitle] = useState(task.title);
-  const [desc, setDesc] = useState(task.description || '');
-  const [reason, setReason] = useState(task.blocked_reason || '');
+  // Edits stay local until Save; fields the user hasn't touched keep following live updates.
+  const [changes, setChanges] = useState({});
+  const [saving, setSaving] = useState(false);
+  const [confirmClose, setConfirmClose] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [tab, setTab] = useState('comments');
   const titleRef = useRef(null);
 
-  useEffect(() => setTitle(task.title), [task.title]);
-  useEffect(() => setDesc(task.description || ''), [task.description]);
-  useEffect(() => setReason(task.blocked_reason || ''), [task.blocked_reason]);
-  const [prog, setProg] = useState(task.progress);
-  useEffect(() => setProg(task.progress), [task.progress]);
-  const commitProgress = () => prog !== task.progress && actions.updateTask(task.id, { progress: prog });
+  const d = { ...task, ...changes };
+  const set = (patch) => setChanges((c) => ({ ...c, ...patch }));
+
+  const allowed = isStaff ? STAFF_TASK_FIELDS : CLIENT_TASK_FIELDS;
+  const pending = {};
+  for (const [k, v] of Object.entries(changes)) {
+    const next = k === 'title' ? v.trim() : v;
+    if (allowed.includes(k) && norm(next) !== norm(task[k])) pending[k] = k === 'description' ? next : norm(next);
+  }
+  if (!d.is_blocked) delete pending.blocked_reason;
+  const dirty = canEdit && Object.keys(pending).length > 0;
+  const error = !canEdit
+    ? null
+    : !d.title.trim()
+      ? 'Title can’t be empty.'
+      : d.start_date && d.due_date && d.start_date > d.due_date
+        ? 'Start date is after the due date.'
+        : null;
+
+  async function save() {
+    if (!dirty || error || saving) return false;
+    const sent = changes;
+    setSaving(true);
+    const row = await actions.updateTask(task.id, pending);
+    setSaving(false);
+    if (!row) return false; // the error toast is already shown; keep the draft so it can be retried
+    setChanges((c) => Object.fromEntries(Object.entries(c).filter(([k, v]) => v !== sent[k])));
+    toast.success('Changes saved');
+    return true;
+  }
+
+  const saveRef = useRef(save);
+  saveRef.current = save;
+  useEffect(() => {
+    const onKey = (e) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
+        e.preventDefault();
+        saveRef.current();
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
+
+  useEffect(() => {
+    closeGuard.current = dirty ? () => (setConfirmClose(true), true) : null;
+    return () => {
+      closeGuard.current = null;
+    };
+  }, [dirty, closeGuard]);
+
+  useEffect(() => {
+    if (!dirty) return;
+    const warn = (e) => {
+      e.preventDefault();
+      e.returnValue = '';
+    };
+    window.addEventListener('beforeunload', warn);
+    return () => window.removeEventListener('beforeunload', warn);
+  }, [dirty]);
 
   useEffect(() => {
     if (isStaff && task.title === 'New task') {
@@ -68,16 +130,18 @@ function TaskBody({ task, data, isStaff, onClose }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const update = (patch) => actions.updateTask(task.id, patch);
-  const teamOwners = owners.filter((p) => p.role === 'staff');
-  const clientOwners = owners.filter((p) => p.role !== 'staff');
-  const assignee = profileById[task.assignee_id];
+  const ownerOptions = [...owners.filter((p) => p.role === 'staff'), ...owners.filter((p) => p.role !== 'staff')];
+  const assignee = profileById[d.assignee_id];
   const phase = phaseById[task.phase_id];
   const overdue = isOverdue(task);
 
   async function remove() {
     await actions.deleteTask(task.id);
     onClose();
+  }
+
+  async function saveAndClose() {
+    if (await save()) onClose();
   }
 
   return (
@@ -91,19 +155,43 @@ function TaskBody({ task, data, isStaff, onClose }) {
           {!isStaff && canEdit && <span className="badge badge-client" title="You can update this task">Assigned to you</span>}
         </div>
         <div className="row-gap">
-          {isStaff &&
-            (confirmDelete ? (
-              <span className="confirm-inline">
-                Delete task?
-                <button className="btn btn-sm btn-danger" onClick={remove}>Delete</button>
-                <button className="btn btn-sm" onClick={() => setConfirmDelete(false)}>Cancel</button>
-              </span>
-            ) : (
-              <button className="icon-btn" onClick={() => setConfirmDelete(true)} aria-label="Delete task" title="Delete task">
-                <Icon name="trash" />
-              </button>
-            ))}
-          <button className="icon-btn" onClick={onClose} aria-label="Close task"><Icon name="x" /></button>
+          {confirmClose ? (
+            <span className="confirm-inline">
+              Unsaved changes
+              <button className="btn btn-sm btn-primary" onClick={saveAndClose} disabled={!!error || saving}>Save & close</button>
+              <button className="btn btn-sm" onClick={onClose}>Discard</button>
+              <button className="btn btn-sm btn-ghost" onClick={() => setConfirmClose(false)}>Keep editing</button>
+            </span>
+          ) : (
+            <>
+              {dirty && (
+                <button className="btn btn-sm btn-ghost" onClick={() => setChanges({})} disabled={saving}>Discard</button>
+              )}
+              {canEdit && (
+                <button
+                  className="btn btn-sm btn-primary"
+                  onClick={save}
+                  disabled={!dirty || !!error || saving}
+                  title={error || (dirty ? 'Save changes (Ctrl + S)' : 'No unsaved changes')}
+                >
+                  <Icon name="check" size={14} /> {saving ? 'Saving…' : 'Save'}
+                </button>
+              )}
+              {isStaff &&
+                (confirmDelete ? (
+                  <span className="confirm-inline">
+                    Delete task?
+                    <button className="btn btn-sm btn-danger" onClick={remove}>Delete</button>
+                    <button className="btn btn-sm" onClick={() => setConfirmDelete(false)}>Cancel</button>
+                  </span>
+                ) : (
+                  <button className="icon-btn" onClick={() => setConfirmDelete(true)} aria-label="Delete task" title="Delete task">
+                    <Icon name="trash" />
+                  </button>
+                ))}
+              <button className="icon-btn" onClick={requestClose} aria-label="Close task"><Icon name="x" /></button>
+            </>
+          )}
         </div>
       </div>
 
@@ -112,29 +200,24 @@ function TaskBody({ task, data, isStaff, onClose }) {
           <textarea
             ref={titleRef}
             className="drawer-title-input"
-            value={title}
+            value={d.title}
             rows={1}
             aria-label="Task title"
-            onChange={(e) => setTitle(e.target.value)}
-            onBlur={() => title.trim() && title !== task.title && update({ title: title.trim() })}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') {
-                e.preventDefault();
-                e.currentTarget.blur();
-              }
-            }}
+            onChange={(e) => set({ title: e.target.value })}
+            onKeyDown={(e) => e.key === 'Enter' && e.preventDefault()}
           />
         ) : (
           <h2 className="drawer-title">{task.title}</h2>
         )}
+        {error && <div className="small text-danger">{error}</div>}
 
         <dl className="props">
           <dt>Status</dt>
           <dd>
             {canEdit ? (
               <div className="select-wrap with-dot">
-                <StatusDot status={task.status} />
-                <select value={task.status} onChange={(e) => update({ status: e.target.value })} aria-label="Status">
+                <StatusDot status={d.status} />
+                <select value={d.status} onChange={(e) => set({ status: e.target.value })} aria-label="Status">
                   {STATUSES.map((s) => <option key={s.id} value={s.id}>{s.label}</option>)}
                 </select>
               </div>
@@ -146,7 +229,7 @@ function TaskBody({ task, data, isStaff, onClose }) {
           <dt>Phase</dt>
           <dd>
             {isStaff ? (
-              <select value={task.phase_id || ''} onChange={(e) => update({ phase_id: e.target.value || null })} aria-label="Phase">
+              <select value={d.phase_id || ''} onChange={(e) => set({ phase_id: e.target.value || null })} aria-label="Phase">
                 <option value="">No phase</option>
                 {phases.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
               </select>
@@ -160,16 +243,9 @@ function TaskBody({ task, data, isStaff, onClose }) {
             {isStaff ? (
               <div className="select-wrap with-avatar">
                 <Avatar profile={assignee} size={20} />
-                <select value={task.assignee_id || ''} onChange={(e) => update({ assignee_id: e.target.value || null })} aria-label="Owner">
+                <select value={d.assignee_id || ''} onChange={(e) => set({ assignee_id: e.target.value || null })} aria-label="Owner">
                   <option value="">Unassigned</option>
-                  <optgroup label="CodeSync team">
-                    {teamOwners.map((p) => <option key={p.id} value={p.id}>{p.full_name}</option>)}
-                  </optgroup>
-                  {clientOwners.length > 0 && (
-                    <optgroup label={`Client side${project?.client ? ` · ${project.client.name}` : ''}`}>
-                      {clientOwners.map((p) => <option key={p.id} value={p.id}>{p.full_name}</option>)}
-                    </optgroup>
-                  )}
+                  {ownerOptions.map((p) => <option key={p.id} value={p.id}>{p.full_name}</option>)}
                 </select>
               </div>
             ) : (
@@ -185,43 +261,40 @@ function TaskBody({ task, data, isStaff, onClose }) {
           <dd>
             {canEdit ? (
               <div className="date-pair">
-                <input type="date" value={task.start_date || ''} max={task.due_date || undefined} onChange={(e) => update({ start_date: e.target.value || null })} aria-label="Start date" />
+                <input type="date" value={d.start_date || ''} max={d.due_date || undefined} onChange={(e) => set({ start_date: e.target.value || null })} aria-label="Start date" />
                 <span className="muted">→</span>
-                <input type="date" value={task.due_date || ''} min={task.start_date || undefined} onChange={(e) => update({ due_date: e.target.value || null })} aria-label="Due date" />
+                <input type="date" value={d.due_date || ''} min={d.start_date || undefined} onChange={(e) => set({ due_date: e.target.value || null })} aria-label="Due date" />
               </div>
             ) : (
               <span className="prop-value">
                 {task.start_date ? fmtDate(task.start_date) : '—'} → {task.due_date ? fmtDate(task.due_date, true) : '—'}
               </span>
             )}
-            {task.due_date && task.status !== 'done' && (
-              <div className={`small ${overdue ? 'text-danger' : 'muted'}`}>Due {relDays(task.due_date)}</div>
+            {d.due_date && d.status !== 'done' && (
+              <div className={`small ${isOverdue(d) ? 'text-danger' : 'muted'}`}>Due {relDays(d.due_date)}</div>
             )}
           </dd>
 
           <dt>Progress</dt>
           <dd>
-            {canEdit && task.status !== 'done' ? (
+            {canEdit && d.status !== 'done' ? (
               <div className="progress-edit">
                 <input
                   type="range"
                   min="0"
                   max="100"
                   step="5"
-                  value={prog}
+                  value={d.progress}
                   aria-label="Progress"
-                  style={{ '--fill': `${prog}%` }}
-                  onChange={(e) => setProg(Number(e.target.value))}
-                  onPointerUp={commitProgress}
-                  onKeyUp={commitProgress}
-                  onBlur={commitProgress}
+                  style={{ '--fill': `${d.progress}%` }}
+                  onChange={(e) => set({ progress: Number(e.target.value) })}
                 />
-                <span className="mono">{prog}%</span>
+                <span className="mono">{d.progress}%</span>
               </div>
             ) : (
               <div className="progress-edit">
-                <ProgressBar value={task.status === 'done' ? 100 : task.progress} label="Task progress" />
-                <span className="mono">{task.status === 'done' ? 100 : task.progress}%</span>
+                <ProgressBar value={d.status === 'done' ? 100 : d.progress} label="Task progress" />
+                <span className="mono">{d.status === 'done' ? 100 : d.progress}%</span>
               </div>
             )}
           </dd>
@@ -232,7 +305,7 @@ function TaskBody({ task, data, isStaff, onClose }) {
               <dd>
                 <div className="segmented" role="radiogroup" aria-label="Priority">
                   {PRIORITIES.map((p) => (
-                    <button key={p.id} role="radio" aria-checked={task.priority === p.id} className={task.priority === p.id ? 'is-on' : ''} onClick={() => update({ priority: p.id })}>
+                    <button key={p.id} role="radio" aria-checked={d.priority === p.id} className={d.priority === p.id ? 'is-on' : ''} onClick={() => set({ priority: p.id })}>
                       {p.label}
                     </button>
                   ))}
@@ -244,22 +317,21 @@ function TaskBody({ task, data, isStaff, onClose }) {
 
         {canEdit && (
           <div className="flag-row">
-            {isStaff && <Toggle id="tg-ms" checked={task.is_milestone} onChange={(v) => update({ is_milestone: v })} label="Milestone" />}
-            <Toggle id="tg-bl" checked={task.is_blocked} onChange={(v) => update({ is_blocked: v, blocked_reason: v ? reason || null : null })} label="Blocked" />
-            {isStaff && <Toggle id="tg-in" checked={task.internal} onChange={(v) => update({ internal: v })} label="Internal (hidden from client)" />}
+            {isStaff && <Toggle id="tg-ms" checked={d.is_milestone} onChange={(v) => set({ is_milestone: v })} label="Milestone" />}
+            <Toggle id="tg-bl" checked={d.is_blocked} onChange={(v) => set({ is_blocked: v })} label="Blocked" />
+            {isStaff && <Toggle id="tg-in" checked={d.internal} onChange={(v) => set({ internal: v })} label="Internal (hidden from client)" />}
           </div>
         )}
 
-        {task.is_blocked && (
+        {d.is_blocked && (
           <div className="blocked-box">
             <Icon name="alert" size={15} />
             {canEdit ? (
               <input
-                value={reason}
+                value={d.blocked_reason || ''}
                 placeholder="What is this waiting on?"
                 aria-label="Blocked reason"
-                onChange={(e) => setReason(e.target.value)}
-                onBlur={() => reason !== (task.blocked_reason || '') && update({ blocked_reason: reason || null })}
+                onChange={(e) => set({ blocked_reason: e.target.value })}
               />
             ) : (
               <span>{task.blocked_reason || 'Blocked'}</span>
@@ -271,11 +343,10 @@ function TaskBody({ task, data, isStaff, onClose }) {
         {canEdit ? (
           <textarea
             className="desc-input"
-            value={desc}
+            value={d.description || ''}
             placeholder="Add details, acceptance criteria or links…"
-            rows={Math.min(12, Math.max(4, desc.split('\n').length + 1))}
-            onChange={(e) => setDesc(e.target.value)}
-            onBlur={() => desc !== (task.description || '') && update({ description: desc })}
+            rows={Math.min(12, Math.max(4, (d.description || '').split('\n').length + 1))}
+            onChange={(e) => set({ description: e.target.value })}
           />
         ) : (
           <p className="desc">{task.description || <span className="muted">No description.</span>}</p>
@@ -294,6 +365,7 @@ function TaskBody({ task, data, isStaff, onClose }) {
     </>
   );
 }
+
 
 function Comments({ taskId }) {
   const { profile, isStaff } = useAuth();
