@@ -59,7 +59,7 @@ export default function ProjectLayout() {
           </div>
           <div className="project-actions">
             {!isStaff && (
-              <span className="badge badge-client" title="You can view progress and leave comments">
+              <span className="badge badge-client" title="You can view progress, leave comments and update tasks assigned to you">
                 <Icon name="eye" size={13} /> View & comment
               </span>
             )}

@@ -8,6 +8,7 @@ import { useToast } from '../context/ToastContext';
 import { Avatar, ProgressBar, StatusDot, Toggle } from './ui';
 import { Icon } from './Icon';
 import { describeEvent } from '../lib/events';
+import { canEditTask } from '../lib/permissions';
 
 export default function TaskDrawer({ task, data, isStaff, onClose }) {
   const panelRef = useRef(null);
@@ -41,7 +42,9 @@ export default function TaskDrawer({ task, data, isStaff, onClose }) {
 }
 
 function TaskBody({ task, data, isStaff, onClose }) {
-  const { actions, phases, profiles, profileById, phaseById } = data;
+  const { actions, phases, owners, profileById, phaseById, project } = data;
+  const { profile } = useAuth();
+  const canEdit = canEditTask(task, profile);
   const [title, setTitle] = useState(task.title);
   const [desc, setDesc] = useState(task.description || '');
   const [reason, setReason] = useState(task.blocked_reason || '');
@@ -66,7 +69,8 @@ function TaskBody({ task, data, isStaff, onClose }) {
   }, []);
 
   const update = (patch) => actions.updateTask(task.id, patch);
-  const staffProfiles = profiles.filter((p) => p.role === 'staff');
+  const teamOwners = owners.filter((p) => p.role === 'staff');
+  const clientOwners = owners.filter((p) => p.role !== 'staff');
   const assignee = profileById[task.assignee_id];
   const phase = phaseById[task.phase_id];
   const overdue = isOverdue(task);
@@ -84,6 +88,7 @@ function TaskBody({ task, data, isStaff, onClose }) {
           {task.internal && <span className="badge badge-internal"><Icon name="lock" size={11} /> Internal</span>}
           {task.is_blocked && <span className="badge badge-blocked"><Icon name="alert" size={11} /> Blocked</span>}
           {overdue && <span className="badge badge-blocked">Overdue</span>}
+          {!isStaff && canEdit && <span className="badge badge-client" title="You can update this task">Assigned to you</span>}
         </div>
         <div className="row-gap">
           {isStaff &&
@@ -103,7 +108,7 @@ function TaskBody({ task, data, isStaff, onClose }) {
       </div>
 
       <div className="drawer-scroll">
-        {isStaff ? (
+        {canEdit ? (
           <textarea
             ref={titleRef}
             className="drawer-title-input"
@@ -126,7 +131,7 @@ function TaskBody({ task, data, isStaff, onClose }) {
         <dl className="props">
           <dt>Status</dt>
           <dd>
-            {isStaff ? (
+            {canEdit ? (
               <div className="select-wrap with-dot">
                 <StatusDot status={task.status} />
                 <select value={task.status} onChange={(e) => update({ status: e.target.value })} aria-label="Status">
@@ -157,17 +162,28 @@ function TaskBody({ task, data, isStaff, onClose }) {
                 <Avatar profile={assignee} size={20} />
                 <select value={task.assignee_id || ''} onChange={(e) => update({ assignee_id: e.target.value || null })} aria-label="Owner">
                   <option value="">Unassigned</option>
-                  {staffProfiles.map((p) => <option key={p.id} value={p.id}>{p.full_name}</option>)}
+                  <optgroup label="CodeSync team">
+                    {teamOwners.map((p) => <option key={p.id} value={p.id}>{p.full_name}</option>)}
+                  </optgroup>
+                  {clientOwners.length > 0 && (
+                    <optgroup label={`Client side${project?.client ? ` · ${project.client.name}` : ''}`}>
+                      {clientOwners.map((p) => <option key={p.id} value={p.id}>{p.full_name}</option>)}
+                    </optgroup>
+                  )}
                 </select>
               </div>
             ) : (
-              <span className="prop-value"><Avatar profile={assignee} size={20} /> {assignee?.full_name || 'Unassigned'}</span>
+              <span className="prop-value">
+                <Avatar profile={assignee} size={20} /> {assignee?.full_name || 'Unassigned'}
+                {assignee?.role === 'client' && <span className="badge badge-client tiny">Client</span>}
+              </span>
             )}
+            {isStaff && assignee?.role === 'client' && <div className="small muted">Client-side task — they can update it.</div>}
           </dd>
 
           <dt>Dates</dt>
           <dd>
-            {isStaff ? (
+            {canEdit ? (
               <div className="date-pair">
                 <input type="date" value={task.start_date || ''} max={task.due_date || undefined} onChange={(e) => update({ start_date: e.target.value || null })} aria-label="Start date" />
                 <span className="muted">→</span>
@@ -185,7 +201,7 @@ function TaskBody({ task, data, isStaff, onClose }) {
 
           <dt>Progress</dt>
           <dd>
-            {isStaff && task.status !== 'done' ? (
+            {canEdit && task.status !== 'done' ? (
               <div className="progress-edit">
                 <input
                   type="range"
@@ -210,7 +226,7 @@ function TaskBody({ task, data, isStaff, onClose }) {
             )}
           </dd>
 
-          {isStaff && (
+          {canEdit && (
             <>
               <dt>Priority</dt>
               <dd>
@@ -226,18 +242,18 @@ function TaskBody({ task, data, isStaff, onClose }) {
           )}
         </dl>
 
-        {isStaff && (
+        {canEdit && (
           <div className="flag-row">
-            <Toggle id="tg-ms" checked={task.is_milestone} onChange={(v) => update({ is_milestone: v })} label="Milestone" />
+            {isStaff && <Toggle id="tg-ms" checked={task.is_milestone} onChange={(v) => update({ is_milestone: v })} label="Milestone" />}
             <Toggle id="tg-bl" checked={task.is_blocked} onChange={(v) => update({ is_blocked: v, blocked_reason: v ? reason || null : null })} label="Blocked" />
-            <Toggle id="tg-in" checked={task.internal} onChange={(v) => update({ internal: v })} label="Internal (hidden from client)" />
+            {isStaff && <Toggle id="tg-in" checked={task.internal} onChange={(v) => update({ internal: v })} label="Internal (hidden from client)" />}
           </div>
         )}
 
         {task.is_blocked && (
           <div className="blocked-box">
             <Icon name="alert" size={15} />
-            {isStaff ? (
+            {canEdit ? (
               <input
                 value={reason}
                 placeholder="What is this waiting on?"
@@ -252,7 +268,7 @@ function TaskBody({ task, data, isStaff, onClose }) {
         )}
 
         <div className="section-label">Description</div>
-        {isStaff ? (
+        {canEdit ? (
           <textarea
             className="desc-input"
             value={desc}

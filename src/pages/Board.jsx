@@ -4,14 +4,32 @@ import { DndContext, DragOverlay, KeyboardSensor, PointerSensor, closestCorners,
 import { STATUSES } from '../lib/constants';
 import { fmtDate, isOverdue } from '../lib/dates';
 import { useAuth } from '../context/AuthContext';
+import { canEditTask } from '../lib/permissions';
 import { Avatar, ProgressBar } from '../components/ui';
 import { Icon } from '../components/Icon';
 
+const SORTS = [
+  { id: 'manual', label: 'Board order' },
+  { id: 'due_asc', label: 'Deadline · soonest first' },
+  { id: 'due_desc', label: 'Deadline · latest first' },
+];
+
+// Tasks without a deadline always sink to the bottom; ties keep the board order.
+const byDeadline = (dir) => (a, b) => {
+  if (a.due_date !== b.due_date) {
+    if (!a.due_date) return 1;
+    if (!b.due_date) return -1;
+    return dir * a.due_date.localeCompare(b.due_date);
+  }
+  return a.position - b.position;
+};
+
 export default function Board() {
-  const { tasks, phases, profiles, profileById, phaseById, actions, openTask } = useOutletContext();
+  const { tasks, phases, owners, profileById, phaseById, actions, openTask } = useOutletContext();
   const { isStaff, profile } = useAuth();
   const [phaseFilter, setPhaseFilter] = useState('all');
   const [ownerFilter, setOwnerFilter] = useState('all');
+  const [sort, setSort] = useState('manual');
   const [query, setQuery] = useState('');
   const [activeId, setActiveId] = useState(null);
 
@@ -34,22 +52,30 @@ export default function Board() {
           s.id,
           filtered
             .filter((t) => t.status === s.id)
-            .sort((a, b) => (s.id === 'done' ? (b.completed_at || '').localeCompare(a.completed_at || '') : a.position - b.position)),
+            .sort(
+              sort !== 'manual'
+                ? byDeadline(sort === 'due_asc' ? 1 : -1)
+                : (a, b) => (s.id === 'done' ? (b.completed_at || '').localeCompare(a.completed_at || '') : a.position - b.position),
+            ),
         ]),
       ),
-    [filtered],
+    [filtered, sort],
   );
 
   function onDragEnd({ active, over }) {
     setActiveId(null);
     if (!over) return;
     const task = tasks.find((t) => t.id === active.id);
-    if (!task) return;
+    if (!task || !canEditTask(task, profile)) return;
     const overTask = tasks.find((t) => t.id === over.id);
     const status = overTask ? overTask.status : over.id;
     const col = (columns[status] || []).filter((t) => t.id !== task.id);
     let position;
-    if (overTask && overTask.id !== task.id) {
+    if (sort !== 'manual') {
+      // Cards are ordered by deadline here, so only a move to another column changes anything.
+      if (status === task.status) return;
+      position = col.length ? Math.max(...col.map((t) => t.position)) + 1 : Date.now();
+    } else if (overTask && overTask.id !== task.id) {
       const idx = col.findIndex((t) => t.id === overTask.id);
       const prev = col[idx - 1];
       position = prev ? (prev.position + overTask.position) / 2 : overTask.position - 1;
@@ -67,7 +93,8 @@ export default function Board() {
     await actions.createTask({ title, status, phase_id: phaseFilter !== 'all' && phaseFilter !== 'none' ? phaseFilter : null, position: Date.now() });
   }
 
-  const staff = profiles.filter((p) => p.role === 'staff');
+  const teamOwners = owners.filter((p) => p.role === 'staff');
+  const clientOwners = owners.filter((p) => p.role !== 'staff');
   const activeTask = tasks.find((t) => t.id === activeId);
   const filtersOn = phaseFilter !== 'all' || ownerFilter !== 'all' || query;
 
@@ -85,22 +112,32 @@ export default function Board() {
         </select>
         <select value={ownerFilter} onChange={(e) => setOwnerFilter(e.target.value)} aria-label="Filter by owner">
           <option value="all">Everyone</option>
-          {isStaff && <option value="me">My tasks</option>}
-          {staff.map((p) => <option key={p.id} value={p.id}>{p.full_name}</option>)}
+          <option value="me">My tasks</option>
+          <optgroup label="CodeSync team">
+            {teamOwners.map((p) => <option key={p.id} value={p.id}>{p.full_name}</option>)}
+          </optgroup>
+          {clientOwners.length > 0 && (
+            <optgroup label="Client side">
+              {clientOwners.map((p) => <option key={p.id} value={p.id}>{p.full_name}</option>)}
+            </optgroup>
+          )}
+        </select>
+        <select value={sort} onChange={(e) => setSort(e.target.value)} aria-label="Sort tasks">
+          {SORTS.map((s) => <option key={s.id} value={s.id}>{s.label}</option>)}
         </select>
         {filtersOn && (
           <button className="btn btn-ghost btn-sm" onClick={() => { setPhaseFilter('all'); setOwnerFilter('all'); setQuery(''); }}>
             Clear
           </button>
         )}
-        {!isStaff && <span className="muted small toolbar-note">Click a card to see details and leave comments.</span>}
+        {!isStaff && <span className="muted small toolbar-note">Click a card to see details and leave comments. You can update tasks assigned to you.</span>}
       </div>
 
       <DndContext sensors={sensors} collisionDetection={closestCorners} onDragStart={(e) => setActiveId(e.active.id)} onDragCancel={() => setActiveId(null)} onDragEnd={onDragEnd}>
         <div className="board">
           {STATUSES.map((s) => (
             <Column key={s.id} status={s} tasks={columns[s.id]} isStaff={isStaff} onAdd={quickAdd} render={(t) => (
-              <DraggableCard key={t.id} task={t} disabled={!isStaff} onOpen={openTask} profileById={profileById} phaseById={phaseById} />
+              <DraggableCard key={t.id} task={t} disabled={!canEditTask(t, profile)} onOpen={openTask} profileById={profileById} phaseById={phaseById} />
             )} />
           ))}
         </div>
@@ -192,6 +229,7 @@ function Card({ task, profileById, phaseById, overlay }) {
         {phase && <span className="phase-tag truncate">{phase.name.split('·')[0].trim()}</span>}
         {task.is_milestone && <span className="flag flag-milestone" title="Milestone"><Icon name="diamond" size={11} /></span>}
         {task.internal && <span className="flag" title="Internal — hidden from client"><Icon name="lock" size={11} /></span>}
+        {profileById[task.assignee_id]?.role === 'client' && <span className="flag flag-client" title="Client-side task">Client</span>}
         {task.priority === 'high' && task.status !== 'done' && <span className="flag flag-high" title="High priority">High</span>}
       </div>
       <h3 className="task-card-title">{task.title}</h3>

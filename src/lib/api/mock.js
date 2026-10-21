@@ -1,8 +1,9 @@
 // In-browser stand-in for Supabase, used in demo mode.
 // Mirrors the database rules: staff can edit everything, clients only see
-// their own projects (minus internal tasks) and can only comment.
+// their own projects (minus internal tasks), comment, and edit the tasks they own.
 import { SEED } from './seed';
 import { setRemember } from '../remember';
+import { CLIENT_TASK_FIELDS } from '../permissions';
 
 const DB_KEY = 'cs-portal-demo-db-v2';
 const SESSION_KEY = 'cs-portal-demo-session';
@@ -171,6 +172,7 @@ export const mockApi = {
       phases: db.phases.filter((x) => x.project_id === id).sort((a, b) => a.position - b.position),
       tasks: db.tasks.filter((t) => t.project_id === id && taskVisible(t)).sort((a, b) => a.position - b.position),
       profiles: db.profiles.filter((x) => visibleProfileIds.has(x.id)),
+      members: db.client_members.filter((m) => m.client_id === p.client_id && (isStaff() || m.user_id === sessionUser)).map((m) => m.user_id),
       meetings: db.meetings.filter((m) => m.project_id === id).sort((a, b) => a.meeting_date.localeCompare(b.meeting_date)),
       events: db.task_events
         .filter((e) => e.project_id === id && (isStaff() || !e.internal))
@@ -252,9 +254,13 @@ export const mockApi = {
     return reply(row);
   },
   async updateTask(id, patch) {
-    staffOnly();
     const t = db.tasks.find((x) => x.id === id);
-    if (!t) return fail('Task not found.');
+    if (!t || !taskVisible(t)) return fail('Task not found.');
+    if (!isStaff()) {
+      if (t.assignee_id !== sessionUser) return fail('You can only edit tasks assigned to you.');
+      if (Object.keys(patch).some((k) => !CLIENT_TASK_FIELDS.includes(k)))
+        return fail('You can only change the status, dates, progress and details of tasks assigned to you.');
+    }
     const old = { ...t };
     Object.assign(t, patch);
     applyTaskRules(t, old);

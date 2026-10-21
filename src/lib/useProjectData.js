@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { api } from './api';
 import { useToast } from '../context/ToastContext';
 
-const EMPTY = { loading: true, error: null, project: null, phases: [], tasks: [], profiles: [], meetings: [], events: [] };
+const EMPTY = { loading: true, error: null, project: null, phases: [], tasks: [], profiles: [], members: [], meetings: [], events: [] };
 
 /** Loads everything for one project, keeps it fresh (realtime + after edits) and exposes optimistic actions. */
 export function useProjectData(projectId) {
@@ -112,6 +112,11 @@ export function useProjectData(projectId) {
 
   const profileById = useMemo(() => Object.fromEntries(state.profiles.map((p) => [p.id, p])), [state.profiles]);
   const phaseById = useMemo(() => Object.fromEntries(state.phases.map((p) => [p.id, p])), [state.phases]);
+  // People who can own a task here: the team, this project's client members, and anyone already assigned.
+  const owners = useMemo(() => {
+    const ids = new Set([...state.members, ...state.tasks.map((t) => t.assignee_id)]);
+    return state.profiles.filter((p) => p.role === 'staff' || ids.has(p.id));
+  }, [state.profiles, state.members, state.tasks]);
 
-  return { ...state, profileById, phaseById, actions };
+  return { ...state, profileById, phaseById, owners, actions };
 }

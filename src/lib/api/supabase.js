@@ -52,15 +52,19 @@ export const supabaseApi = {
   listProjects: () =>
     run(sb().from('projects').select(`${PROJECT}, tasks(id,status,progress,is_blocked,is_milestone,due_date,title)`).order('created_at')),
   async loadProject(id) {
-    const [project, phases, tasks, profiles, meetings, events] = await Promise.all([
-      run(sb().from('projects').select(PROJECT).eq('id', id).single()),
+    const [row, phases, tasks, profiles, meetings, events] = await Promise.all([
+      // staff see every client member; RLS shows a client only their own membership row
+      run(sb().from('projects').select('*, client:clients(id,name,accent_color,client_members(user_id))').eq('id', id).single()),
       run(sb().from('phases').select('*').eq('project_id', id).order('position')),
       run(sb().from('tasks').select('*').eq('project_id', id).order('position')),
       run(sb().from('profiles').select('id,full_name,title,role,avatar_color,email').order('full_name')),
       run(sb().from('meetings').select('*').eq('project_id', id).order('meeting_date')),
       run(sb().from('task_events').select('*').eq('project_id', id).order('created_at', { ascending: false }).limit(1000)),
     ]);
-    return { project, phases, tasks, profiles, meetings, events };
+    const { client_members = [], ...client } = row.client || {};
+    const project = { ...row, client: row.client ? client : null };
+    const members = client_members.map((m) => m.user_id);
+    return { project, phases, tasks, profiles, members, meetings, events };
   },
   createProject: (p) => run(sb().from('projects').insert(p).select(PROJECT).single()),
   updateProject: (id, patch) => run(sb().from('projects').update(patch).eq('id', id).select(PROJECT).single()),

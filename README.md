@@ -10,16 +10,20 @@ The team updates work as it happens; clients sign in to view progress and leave 
 | Area | Team (staff) | Client |
 |---|---|---|
 | Overview — progress, phases, milestones, blockers, "since last meeting" | ✓ | ✓ |
-| Board — drag between Backlog / In progress / In review / Done, quick-add, filters | edit | view |
+| Board — drag between Backlog / In progress / In review / Done, quick-add, filters, sort by deadline | edit | view; edit own tasks |
 | Timeline — phases + tasks, milestones, today line, week/month/quarter zoom | ✓ | ✓ |
 | Meetings — auto report of what changed since the last review, notes & decisions, print/PDF | edit | view |
-| Task drawer — status, owner, dates, progress, milestone, blocked, description | edit | view |
+| Task drawer — status, owner (team or client), dates, progress, milestone, blocked, description | edit | view; edit own tasks¹ |
 | Comments & activity on every task | ✓ | ✓ |
 | Internal tasks (hidden from clients) | ✓ | — |
 | Project settings & phases, Clients & people admin | ✓ | — |
 
 Access is enforced in the database (row-level security), not just the UI: a client can only ever read
-projects belonging to their client workspace, never sees internal tasks, and can only write comments.
+projects belonging to their client workspace, never sees internal tasks, and otherwise only writes comments.
+
+¹ A task can be owned by a client member (client-side work). That client can update its title, description,
+status, priority, dates, progress and blocked state, but cannot delete it, reassign it, change its phase or flip
+milestone/internal. Needs `supabase/migrations/003_client_task_owners.sql` run once in the SQL editor.
 
 ## Run locally
 
