@@ -143,6 +143,7 @@ function TaskBody({ task, data, isStaff, onClose, closeGuard }) {
   async function saveAndClose() {
     if (await save()) onClose();
   }
+  const requestClose = () => (dirty ? setConfirmClose(true) : onClose());
 
   return (
     <>
